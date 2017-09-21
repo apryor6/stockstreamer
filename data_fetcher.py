@@ -1,0 +1,119 @@
+from urllib.request import urlopen
+import abc
+import time
+import datetime
+import json
+import psycopg2
+
+class StockFetcher(metaclass=abc.ABCMeta):
+	"""
+	Base class for fetching stock information
+	"""
+	def __init__(self, stocks):
+	    self.stocks = stocks
+
+	def fetchAll(self):
+		stock_data = {}
+		prices = {}
+		stock_data['timestamp'] = datetime.datetime.now()
+		for stock in self.stocks:
+			prices[stock] = self.fetchPrice(stock)
+		stock_data['prices'] = prices
+		return stock_data
+
+	@abc.abstractmethod
+	def fetchPrice(self, stock):
+		return NotImplemented
+
+	@abc.abstractmethod
+	def fetchImage(self, stock):
+		return NotImplemented
+
+class IEXStockFetcher(StockFetcher):
+	"""
+	Fetches stock information using iextrading.com API
+	"""
+
+	url_prefix = "https://api.iextrading.com/1.0/stock/"
+	url_suffix_price = "/price"
+	url_suffix_img = "/logo"
+
+	def __init__(self, stocks):
+		super().__init__(stocks)
+		# get the image URLs once
+		self.stock_image_urls = {stock:self.fetchImage(stock) for stock in self.stocks}
+
+	def fetchPrice(self, stock):
+		# get the price of a single stock
+		resp = urlopen("{}{}{}".format(IEXStockFetcher.url_prefix, stock, IEXStockFetcher.url_suffix_price))
+		price = float(resp.readlines()[0])
+		return price
+
+	def fetchImage(self, stock):
+		# get the image url of a single stock
+		resp = urlopen("{}{}{}".format(IEXStockFetcher.url_prefix, stock, IEXStockFetcher.url_suffix_img))
+		resp = json.loads(resp.readlines()[0])  
+		return resp['url']
+
+class PostgreSQLStockManager():
+	"""
+	Records fetched stock data in a postgreSQL table 
+	"""
+
+	def __init__(self, conn, stock_fetcher):
+		self.conn = conn
+		self.stock_fetcher = stock_fetcher
+		# self.cur = self.conn.cursor()
+
+	def insertStock(self, table, timestamp, stock, price):
+		cur = self.conn.cursor()
+		query = "INSERT INTO {} VALUES(\"{}\", \"{}\", {})".format(table, timestamp, stock, price)
+
+		query = """
+		INSERT INTO {} (time, stock_name, price) VALUES(
+		\'{}\',
+		\'{}\',
+		{});
+		""".format(table, timestamp, stock, price)
+		# print("Query: ", query)
+
+		# query = """
+		# INSERT INTO {} VALUES(
+		# "time", \"{}\",
+		# "stock_name", \"{}\",
+		# "price", {})
+		# """.format(table, timestamp, stock, price)
+		# print("Query: ", query)
+		cur.execute(query)
+		self.conn.commit()
+		# print ("\n\nSELECTING\n\n")
+		# cur.execute("""
+			# SELECT * FROM stock_prices
+# 
+		# """)
+
+	def fetchInsertLoop(self, sleeptime=1):
+		count = 1
+		while True:
+			print("Update #{}".format(count))
+			count+=1
+			stock_updates = self.stock_fetcher.fetchAll()
+			print("UPDATE: ", stock_updates)
+			for stock, price in stock_updates['prices'].items():
+				print ("stock_prices", stock_updates['timestamp'], stock, price)
+				self.insertStock("stock_prices", stock_updates['timestamp'], stock, price)
+			time.sleep(sleeptime)
+
+def main():
+	stocks_to_fetch = ['GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX']
+	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
+	conn = psycopg2.connect("dbname=stocks user=ajpryor")
+	manager = PostgreSQLStockManager(conn, stock_fetcher)
+	manager.fetchInsertLoop(1)
+	# prices = stock_fetcher.fetchAll()
+	# for k, v in prices.items():
+	# 	print(k, v)
+
+if __name__ == '__main__':
+	main()
+# 
