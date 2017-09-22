@@ -1,19 +1,29 @@
 from bokeh.plotting import figure, curdoc, show
 from bokeh.models.sources import ColumnDataSource
-from bokeh.models import Range1d
+from bokeh.models import Range1d, Legend
 from bokeh.layouts import row
+from bokeh.palettes import Dark2
 
 import datetime
 import psycopg2
 import pandas as pd
 import numpy as np
 
-# p = figure(toolbar_location=None)
-p = figure()
+p = figure(title="STOCKSTREAMER")
 p2 = figure()
+p.background_fill_color = "#F0F0F0"
+p.title.text_font = "times"
+p.title.text_font_size = "16pt"
+
+p.text(x=[0], y=[-50],
+ text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
+ text_font_size="8pt", text_font_style='italic')
+
 conn = psycopg2.connect("dbname=stocks user=ajpryor")
 line_colors = ['red','green','black','cyan','firebrick','olive']
-line_dashes = ['solid','dashed','dotted','dashdot','solid','solid']
+line_colors = Dark2[6]
+line_dashes = ['solid']*6
+
 
 image_urls = {'GE'   :  'https://storage.googleapis.com/iex/api/logos/GE.png',
 'AMZN'  :  'https://storage.googleapis.com/iex/api/logos/AMZN.png',
@@ -40,21 +50,41 @@ def get_data():
 
 xs, ys, max_ys, unique_names = get_data()
 lines = []
-for i, (x, y) in enumerate(zip(xs, ys)):
-	# print("INDI ", (len(x), len(y)))
+circles = []
+recs = []
+for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	lines.append(p.line(x=x,
 	    y=y,
 	    line_alpha=1,
 	    line_color=line_colors[i],
 	    line_dash=line_dashes[i],
-	    line_width=4))
+	    line_width=5))
+	circles.append(p.circle(x=x,
+	    y=y,
+	    line_alpha=1,
+	    radius=0.1,
+	    line_color='black',
+	    fill_color=line_colors[i],
+	    line_dash=line_dashes[i],
+	    line_width=1))
+	    # legend=name))
+	
+	source = ColumnDataSource(dict(y=[max_y],
+								   left=[x[0]],
+			                       right=[x[-1]],
+			                       height=[50],
+			                       fill_alpha=[0.1],
+			                       fill_color=[line_colors[i]],
+			                       line_color=[line_colors[i]]))
+	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
+		line_alpha=0.01, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
+legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0))
 N = len(image_urls)
 latest_timestamp = np.max(xs[0])
 source = ColumnDataSource(dict(
     url = [image_urls[name] for name in unique_names],
     x1  = [0]*N,
-
     y1  = max_ys,
     w1  = [128]*N,
     h1  = [64]*N,
@@ -62,21 +92,19 @@ source = ColumnDataSource(dict(
 # 
 p2.x_range = Range1d(-10, 10+32*N)
 p2.y_range = Range1d(10, 10+32*N)
-# p.x_range = Range1d(-10, 10+32*N)
-# p.y_range = Range1d(10, 10+32*N)
 image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center")
 image_plot = p2.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center")
 
 def callback():
 	xs, ys, max_ys, unique_names = get_data()
-	for i, (x, y) in enumerate(zip(xs, ys)):
+	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
+		new_data = dict(x=x, y=y)
+		ds_lines = lines[i].data_source
+		ds_lines.data = new_data
+		ds_circle = circles[i].data_source
+		ds_circle.data = new_data
+		recs[i].data_source.data.update(left=[x[0]], right=[x[-1]])
 
-		ds = lines[i].data_source
-		ds.data = dict(x=x, y=y)
-
-
+p.add_layout(legend, 'right')
 curdoc().add_root(p)
-# curdoc().add_root(row(p,p2))
-# curdoc().add_root(p2)
-
-curdoc().add_periodic_callback(callback, 500)
+curdoc().add_periodic_callback(callback, 5000)
