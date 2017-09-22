@@ -52,7 +52,9 @@ class IEXStockFetcher(StockFetcher):
 	def fetchImage(self, stock):
 		# get the image url of a single stock
 		resp = urlopen("{}{}{}".format(IEXStockFetcher.url_prefix, stock, IEXStockFetcher.url_suffix_img))
-		resp = json.loads(resp.readlines()[0])  
+		
+		resp = json.loads(resp.readlines()[0].decode('utf8'))
+		#print(resp.readlines())  
 		return resp['url']
 
 class PostgreSQLStockManager():
@@ -90,7 +92,7 @@ class PostgreSQLStockManager():
 def main():
 	stocks_to_fetch = ['GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX']
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
-	conn = psycopg2.connect("dbname=stocks user=ajpryor")
+	conn = psycopg2.connect("dbname=stocks user=ubuntu")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
 	for stock in stocks_to_fetch:
 		print("Stock URL : " , stock_fetcher.fetchImage(stock))
