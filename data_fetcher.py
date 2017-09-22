@@ -81,26 +81,28 @@ class PostgreSQLStockManager():
 		cur.execute(query)
 		self.conn.commit()
 
-	def fetchInsertLoop(self, sleeptime=1):
-		# count = 1
+	def fetchInsertStockLoop(self, sleeptime=1):
 		while True:
-			# print("Update #{}".format(count))
-			# count+=1
 			stock_updates = self.stock_fetcher.fetchAllPrices()
-			#print("UPDATE: ", stock_updates)
 			for stock, price in stock_updates['prices'].items():
-				# print ("stock_prices", stock_updates['timestamp'], stock, price)
 				self.insertStock("stock_prices", stock_updates['timestamp'], stock, price)
 			time.sleep(sleeptime)
 
+	# def fetchfetchHighLowLoop(self, sleeptime=1000):
+	# 	while True:
+	# 		for stock, price in stock_updates['prices'].items():
+	# 			self.insertStock("stock_high_low", stock_updates['timestamp'], stock, price)
+	# 		time.sleep(sleeptime)
 def main():
 	stocks_to_fetch = ['GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX']
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
 	conn = psycopg2.connect("dbname=stocks user=ubuntu")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
+	metadata_manager = PostgreSQLStockManager(conn, stock_fetcher)
 	for stock in stocks_to_fetch:
 		print("Stock URL : " , stock_fetcher.fetchImage(stock))
-	manager.fetchInsertLoop(5)
+	manager.fetchInsertStockLoop(5)
+	# metadata_manager.fetchMetaLoop(5000)
 
 if __name__ == '__main__':
 	main()

@@ -1,6 +1,7 @@
 from bokeh.plotting import figure, curdoc, show
 from bokeh.models.sources import ColumnDataSource
 from bokeh.models import Range1d, Legend
+from bokeh.models.tools import PanTool, BoxZoomTool, WheelZoomTool, ResetTool
 from bokeh.layouts import row
 from bokeh.palettes import Dark2
 
@@ -9,8 +10,9 @@ import psycopg2
 import pandas as pd
 import numpy as np
 
-p = figure(title="STOCKSTREAMER")
-p2 = figure()
+tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
+p = figure(title="STOCKSTREAMER", tools=tools, plot_width=1000, plot_height=480)
+# p = figure(title="STOCKSTREAMER")
 p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
 p.title.text_font_size = "16pt"
@@ -84,16 +86,14 @@ N = len(image_urls)
 latest_timestamp = np.max(xs[0])
 source = ColumnDataSource(dict(
     url = [image_urls[name] for name in unique_names],
-    x1  = [0]*N,
+    x1  = [-128]*N,
     y1  = max_ys,
     w1  = [128]*N,
-    h1  = [64]*N,
+    h1  = [128]*N,
 ))
-# 
-p2.x_range = Range1d(-10, 10+32*N)
-p2.y_range = Range1d(10, 10+32*N)
-image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center")
-image_plot = p2.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center")
+
+p.x_range=Range1d(-256, xs[0][-1])
+image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center", global_alpha=0.7)
 
 def callback():
 	xs, ys, max_ys, unique_names = get_data()
