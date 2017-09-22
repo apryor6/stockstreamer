@@ -12,7 +12,7 @@ class StockFetcher(metaclass=abc.ABCMeta):
 	def __init__(self, stocks):
 	    self.stocks = stocks
 
-	def fetchAll(self):
+	def fetchAllPrices(self):
 		stock_data = {}
 		prices = {}
 		stock_data['timestamp'] = datetime.datetime.now()
@@ -63,44 +63,27 @@ class PostgreSQLStockManager():
 	def __init__(self, conn, stock_fetcher):
 		self.conn = conn
 		self.stock_fetcher = stock_fetcher
-		# self.cur = self.conn.cursor()
 
 	def insertStock(self, table, timestamp, stock, price):
 		cur = self.conn.cursor()
-		query = "INSERT INTO {} VALUES(\"{}\", \"{}\", {})".format(table, timestamp, stock, price)
-
 		query = """
 		INSERT INTO {} (time, stock_name, price) VALUES(
 		\'{}\',
 		\'{}\',
 		{});
 		""".format(table, timestamp, stock, price)
-		# print("Query: ", query)
-
-		# query = """
-		# INSERT INTO {} VALUES(
-		# "time", \"{}\",
-		# "stock_name", \"{}\",
-		# "price", {})
-		# """.format(table, timestamp, stock, price)
-		# print("Query: ", query)
 		cur.execute(query)
 		self.conn.commit()
-		# print ("\n\nSELECTING\n\n")
-		# cur.execute("""
-			# SELECT * FROM stock_prices
-# 
-		# """)
 
 	def fetchInsertLoop(self, sleeptime=1):
-		count = 1
+		# count = 1
 		while True:
-			print("Update #{}".format(count))
-			count+=1
-			stock_updates = self.stock_fetcher.fetchAll()
-			print("UPDATE: ", stock_updates)
+			# print("Update #{}".format(count))
+			# count+=1
+			stock_updates = self.stock_fetcher.fetchAllPrices()
+			#print("UPDATE: ", stock_updates)
 			for stock, price in stock_updates['prices'].items():
-				print ("stock_prices", stock_updates['timestamp'], stock, price)
+				# print ("stock_prices", stock_updates['timestamp'], stock, price)
 				self.insertStock("stock_prices", stock_updates['timestamp'], stock, price)
 			time.sleep(sleeptime)
 
@@ -110,10 +93,6 @@ def main():
 	conn = psycopg2.connect("dbname=stocks user=ajpryor")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
 	manager.fetchInsertLoop(1)
-	# prices = stock_fetcher.fetchAll()
-	# for k, v in prices.items():
-	# 	print(k, v)
 
 if __name__ == '__main__':
 	main()
-# 
