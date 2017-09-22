@@ -1,0 +1,5 @@
+# Building an interactive, data-driven web-application using Amazon EC2 and Python
+
+Modern data is generated massively and flows constantly. The speed with which data can be understood and consumed is usually directly tied to the success of whatever venture is attempting to understand it, be that for business, research, etc. We want our understanding to be focused not only on the past, but also on what is happening *right now*. For this reason, being familiar with how to produce an infrastructure that can process data on the fly is a valuable skill.  
+
+In this post I'll build an interactive data visualization that is powered by Python. Using [IEX trading's API](https://iextrading.com), we will create a service that constantly queries information about stock prices and stores it in a PostgreSQL database. We'll then build an interactive Python application that fetches data using `psychopg2` and visualizes it interactively with `Bokeh`. Finally, we will deploy this application on the Cloud using Amazon Web Services EC2, making our visualization publicl accessible for free. 
