@@ -68,7 +68,7 @@ image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source
 image_plot = p2.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center")
 
 def callback():
-	xs, ys = get_data()
+	xs, ys, max_ys, unique_names = get_data()
 	for i, (x, y) in enumerate(zip(xs, ys)):
 
 		ds = lines[i].data_source
