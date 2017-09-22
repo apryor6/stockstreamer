@@ -11,7 +11,7 @@ import numpy as np
 # p = figure(toolbar_location=None)
 p = figure()
 p2 = figure()
-conn = psycopg2.connect("dbname=stocks user=ajpryor")
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
 line_colors = ['red','green','black','cyan','firebrick','olive']
 line_dashes = ['solid','dashed','dotted','dashdot','solid','solid']
 
