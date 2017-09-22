@@ -92,6 +92,8 @@ def main():
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
 	conn = psycopg2.connect("dbname=stocks user=ajpryor")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
+	for stock in stocks_to_fetch:
+		print("Stock URL : " , stock_fetcher.fetchImage(stock))
 	manager.fetchInsertLoop(1)
 
 if __name__ == '__main__':
