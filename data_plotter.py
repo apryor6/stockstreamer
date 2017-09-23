@@ -111,7 +111,7 @@ def callback():
 		ds_circle = circles[i].data_source
 		ds_circle.data = new_data
 		recs[i].data_source.data.update(left=[x[0]], right=[x[-1]])
-		p_imgs.y_range = p.y_range
+		#p_imgs.y_range = p.y_range
 
 
 
