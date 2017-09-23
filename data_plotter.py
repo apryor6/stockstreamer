@@ -1,6 +1,6 @@
 from bokeh.plotting import figure, curdoc, show
 from bokeh.models.sources import ColumnDataSource
-from bokeh.models import Range1d, Legend
+from bokeh.models import Range1d, Legend, NumeralTickFormatter
 from bokeh.models.tools import PanTool, BoxZoomTool, WheelZoomTool, ResetTool
 from bokeh.layouts import row
 from bokeh.palettes import Dark2
@@ -14,6 +14,11 @@ tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
 p = figure(title="STOCKSTREAMER", tools=tools, plot_width=1000, y_range=Range1d(-50, 1100), plot_height=680,toolbar_location='below', toolbar_sticky=False)
 # p_imgs = figure(plot_width=512, plot_height=p.plot_height, y_range=p.y_range, toolbar_location=None)
 # p_imgs = figure(plot_width=512, plot_height=680 ,toolbar_location=None)
+
+# set labels
+p.yaxis.axis_label = "Price ($US)"
+p.yaxis.axis_label_text_font_size = '12pt'
+p.yaxis[0].formatter = NumeralTickFormatter(format="$0")
 
 # p = figure(title="STOCKSTREAMER")
 p.background_fill_color = "#F0F0F0"
@@ -111,7 +116,7 @@ def callback():
 		ds_circle = circles[i].data_source
 		ds_circle.data = new_data
 		recs[i].data_source.data.update(left=[x[0]], right=[x[-1]])
-		p_imgs.y_range = p.y_range
+		# p_imgs.y_range = p.y_range
 
 
 
