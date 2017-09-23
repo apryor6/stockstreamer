@@ -121,8 +121,8 @@ latest_timestamp = np.max(xs[0])
 def update_figure():
 	xs, ys, max_ys, unique_names = get_data()
 	# p.x_range.update(start=0, stop=100)
-	p.x_range.start=np.min(xs[0])
-	p.x_range.end=np.max(xs[0])
+#	p.x_range.start=np.min(xs[0])
+#	p.x_range.end=np.max(xs[0])
 	# p.x_range=Range1d(xs[0][0], (datetime.datetime.now()-datetime.datetime(1970,1,1)).total_seconds())
 	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
 		new_data = dict(x=x, y=y)
@@ -134,6 +134,8 @@ def update_figure():
 		#p_imgs.y_range = p.y_range
 
 
+p.x_range.start=np.min(xs[0])
+p.x_range.end=np.max(xs[0])
 
 update_figure()
 p.add_layout(legend, 'below')
