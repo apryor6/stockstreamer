@@ -81,6 +81,26 @@ class PostgreSQLStockManager():
 		cur.execute(query)
 		self.conn.commit()
 
+	def insertStockURL(self, table, stock, url):
+		cur = self.conn.cursor()
+		query = """
+		INSERT INTO {} (stock_name, image_url) VALUES(
+		\'{}\',
+		\'{}\');
+		""".format(table, stock, url)
+		cur.execute(query)
+		self.conn.commit()
+
+	def insertStockHighLow(self, table, stock, high_price, low_price):
+		cur = self.conn.cursor()
+		query = """
+		INSERT INTO {} (stock_name, high_val52wk, low_val52wk) VALUES(
+		\'{}\',
+		\'{}\');
+		""".format(table, stock, high_price, low_price)
+		cur.execute(query)
+		self.conn.commit()
+
 	def fetchInsertStockLoop(self, sleeptime=1):
 		while True:
 			stock_updates = self.stock_fetcher.fetchAllPrices()
