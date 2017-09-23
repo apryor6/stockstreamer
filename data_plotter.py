@@ -40,7 +40,7 @@ p.add_layout(caption, 'below')
 #  text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
 #  text_font_size="8pt", text_font_style='italic')
 
-conn = psycopg2.connect("dbname=stocks user=ubuntu")
+conn = psycopg2.connect("dbname=stocks user=ajpryor")
 line_colors = ['red','green','black','cyan','firebrick','olive']
 line_colors = Dark2[6]
 line_dashes = ['solid']*6
@@ -105,17 +105,17 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
 N = len(image_urls)
 latest_timestamp = np.max(xs[0])
-# source = ColumnDataSource(dict(
-#     url = [image_urls[name] for name in unique_names],
-#     x1  = [-128]*N,
-#     y1  = max_ys,
-#     w1  = [64]*N,
-#     h1  = [64]*N,
-# ))
+source = ColumnDataSource(dict(
+    url = [image_urls[name] for name in unique_names],
+    x1  = [i.min() for i in xs],
+    y1  = max_ys,
+    w1  = [64]*N,
+    h1  = [64]*N,
+))
 
-# p.x_range=Range1d(-256, xs[0][-1])
-# image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
-#  anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
+p.x_range=Range1d(-256, xs[0].max())
+image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
+ anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
 
 
 def update_figure():
