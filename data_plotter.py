@@ -1,6 +1,6 @@
 from bokeh.plotting import figure, curdoc, show
 from bokeh.models.sources import ColumnDataSource
-from bokeh.models import Range1d, Legend, NumeralTickFormatter, DatetimeTickFormatter
+from bokeh.models import Range1d, Legend, NumeralTickFormatter, DatetimeTickFormatter, Title
 from bokeh.models.tools import PanTool, BoxZoomTool, WheelZoomTool, ResetTool
 from bokeh.layouts import row
 from bokeh.palettes import Dark2
@@ -31,9 +31,14 @@ p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
 p.title.text_font_size = "16pt"
 
-p.text(x=[0], y=[-50],
- text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
- text_font_size="8pt", text_font_style='italic')
+caption = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
+	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
+# caption.offset=-50.0
+p.add_layout(caption, 'below')
+
+# info_label = Text(x=[0], y=[-50],
+#  text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
+#  text_font_size="8pt", text_font_style='italic')
 
 conn = psycopg2.connect("dbname=stocks user=ajpryor")
 line_colors = ['red','green','black','cyan','firebrick','olive']
@@ -75,7 +80,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    line_alpha=1,
 	    line_color=line_colors[i],
 	    line_dash=line_dashes[i],
-	    line_width=5))
+	    line_width=2))
 	circles.append(p.circle(x=x,
 	    y=y,
 	    line_alpha=1,
@@ -87,15 +92,15 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    line_width=1))
 	    # legend=name))
 	
-	# source = ColumnDataSource(dict(y=[max_y],
-	# 							   left=[x[0]],
-	# 		                       right=[x[-1]],
-	# 		                       height=[50],
-	# 		                       fill_alpha=[0.1],
-	# 		                       fill_color=[line_colors[i]],
-	# 		                       line_color=[line_colors[i]]))
-	# recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
-	# 	line_alpha=0.01, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
+	source = ColumnDataSource(dict(y=[max_y],
+								   left=[x.min()],
+			                       right=[x.max()],
+			                       height=[50],
+			                       fill_alpha=[0.2],
+			                       fill_color=[line_colors[i]],
+			                       line_color=[line_colors[i]]))
+	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
+		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
 legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
 N = len(image_urls)
@@ -129,6 +134,7 @@ def update_figure():
 
 update_figure()
 p.add_layout(legend, 'below')
+# p.add_layout(info_label, 'below')
 curdoc().add_root(p)
 # curdoc().add_root(row(p, p_imgs))
 curdoc().add_periodic_callback(update_figure, 5000)
