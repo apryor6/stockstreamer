@@ -11,7 +11,10 @@ import pandas as pd
 import numpy as np
 
 tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
-p = figure(title="STOCKSTREAMER", tools=tools, plot_width=1000, plot_height=480)
+p = figure(title="STOCKSTREAMER", tools=tools, plot_width=1000, y_range=Range1d(-50, 1100), plot_height=680,toolbar_location='below', toolbar_sticky=False)
+# p_imgs = figure(plot_width=512, plot_height=p.plot_height, y_range=p.y_range, toolbar_location=None)
+# p_imgs = figure(plot_width=512, plot_height=680 ,toolbar_location=None)
+
 # p = figure(title="STOCKSTREAMER")
 p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
@@ -65,7 +68,8 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    y=y,
 	    line_alpha=1,
 	    radius=0.1,
-	    line_color='black',
+	    # line_color='black',
+	    line_color=line_colors[i],
 	    fill_color=line_colors[i],
 	    line_dash=line_dashes[i],
 	    line_width=1))
@@ -81,19 +85,22 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
 		line_alpha=0.01, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
-legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0))
+legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
 N = len(image_urls)
 latest_timestamp = np.max(xs[0])
 source = ColumnDataSource(dict(
     url = [image_urls[name] for name in unique_names],
     x1  = [-128]*N,
     y1  = max_ys,
-    w1  = [128]*N,
-    h1  = [128]*N,
+    w1  = [64]*N,
+    h1  = [64]*N,
 ))
 
 p.x_range=Range1d(-256, xs[0][-1])
-image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center", global_alpha=0.7)
+image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
+ anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
+# image_plot = p_imgs.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source, anchor="center", global_alpha=0.7)
+
 
 def callback():
 	xs, ys, max_ys, unique_names = get_data()
@@ -104,7 +111,11 @@ def callback():
 		ds_circle = circles[i].data_source
 		ds_circle.data = new_data
 		recs[i].data_source.data.update(left=[x[0]], right=[x[-1]])
+		p_imgs.y_range = p.y_range
 
-p.add_layout(legend, 'right')
+
+
+p.add_layout(legend, 'below')
 curdoc().add_root(p)
+# curdoc().add_root(row(p, p_imgs))
 curdoc().add_periodic_callback(callback, 5000)
