@@ -21,7 +21,7 @@ p.text(x=[0], y=[-50],
  text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
  text_font_size="8pt", text_font_style='italic')
 
-conn = psycopg2.connect("dbname=stocks user=ajpryor")
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
 line_colors = ['red','green','black','cyan','firebrick','olive']
 line_colors = Dark2[6]
 line_dashes = ['solid']*6
