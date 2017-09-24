@@ -17,8 +17,6 @@ time_now = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds
 p = figure(title="STOCKSTREAMER v0.0", tools=tools, plot_width=1000,
  y_range=Range1d(-50, 1100), x_range=Range1d(time_today, time_now),
  plot_height=680,toolbar_location='below', toolbar_sticky=False)
-# p_imgs = figure(plot_width=512, plot_height=p.plot_height, y_range=p.y_range, toolbar_location=None)
-# p_imgs = figure(plot_width=512, plot_height=680 ,toolbar_location=None)
 
 # set labels
 p.yaxis.axis_label = "Price ($US)"
@@ -26,19 +24,14 @@ p.yaxis.axis_label_text_font_size = '12pt'
 p.yaxis[0].formatter = NumeralTickFormatter(format="$0")
 p.xaxis[0].formatter = DatetimeTickFormatter()
 
-# p = figure(title="STOCKSTREAMER")
 p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
 p.title.text_font_size = "16pt"
 
-caption = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
+info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
 	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
-# caption.offset=-50.0
-p.add_layout(caption, 'below')
+p.add_layout(info_label, 'below')
 
-# info_label = Text(x=[0], y=[-50],
-#  text=['Bounding boxes indicate 52-week high/low'], text_font='times', 
-#  text_font_size="8pt", text_font_style='italic')
 
 conn = psycopg2.connect("dbname=stocks user=ajpryor")
 line_colors = ['red','green','black','cyan','firebrick','olive']
@@ -60,11 +53,10 @@ def get_data():
 	AND time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
-	df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+	df['time'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
-	# xs = [list(range(len(y))) for y in ys]
 
 	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
 	max_ys = [np.max(y) for y in ys]
@@ -85,12 +77,10 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    y=y,
 	    line_alpha=1,
 	    radius=0.1,
-	    # line_color='black',
 	    line_color=line_colors[i],
 	    fill_color=line_colors[i],
 	    line_dash=line_dashes[i],
 	    line_width=1))
-	    # legend=name))
 	
 	source = ColumnDataSource(dict(y=[max_y],
 								   left=[x.min()],
@@ -120,19 +110,10 @@ image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source
 
 def update_figure():
 	xs, ys, max_ys, unique_names = get_data()
-	print ("hello")
-	# p.x_range.update(start=0, stop=100)
-#	p.x_range.start=np.min(xs[0])
-#	p.x_range.end=np.max(xs[0])
-	# p.x_range=Range1d(xs[0][0], (datetime.datetime.now()-datetime.datetime(1970,1,1)).total_seconds())
 	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
-		new_data = dict(x=x, y=y)
-		ds_lines = lines[i].data_source
-		ds_lines.data = new_data
-		ds_circle = circles[i].data_source
-		ds_circle.data = new_data
-		#recs[i].data_source.data.update(left=[x[0]], right=[x[-1]])
-		#p_imgs.y_range = p.y_range
+		lines[i].data_source.data.update(x=x, y=y)
+		circles[i].data_source.data.update(x=x, y=y)
+		recs[i].data_source.data.update(left=[x.min()], right=[x.max()])
 
 
 p.x_range.start=np.min(xs[0])
@@ -140,7 +121,5 @@ p.x_range.end=np.max(xs[0])
 
 update_figure()
 p.add_layout(legend, 'below')
-# p.add_layout(info_label, 'below')
 curdoc().add_root(p)
-# curdoc().add_root(row(p, p_imgs))
 curdoc().add_periodic_callback(update_figure, 5000)
