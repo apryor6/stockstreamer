@@ -4,6 +4,8 @@ import time
 import datetime
 import json
 import psycopg2
+from threading import Thread
+from functools import partial
 
 class StockFetcher(metaclass=abc.ABCMeta):
 	"""
@@ -12,14 +14,9 @@ class StockFetcher(metaclass=abc.ABCMeta):
 	def __init__(self, stocks):
 	    self.stocks = stocks
 
-	def fetchAllPrices(self):
-		stock_data = {}
-		prices = {}
-		stock_data['timestamp'] = datetime.datetime.now()
-		for stock in self.stocks:
-			prices[stock] = self.fetchPrice(stock)
-		stock_data['prices'] = prices
-		return stock_data
+	# @abc.abstractmethod
+	# def fetchAllPrices(self):
+		# return NotImplemented
 
 	@abc.abstractmethod
 	def fetchPrice(self, stock):
@@ -42,6 +39,26 @@ class IEXStockFetcher(StockFetcher):
 		super().__init__(stocks)
 		# get the image URLs once
 		self.stock_image_urls = {stock:self.fetchImage(stock) for stock in self.stocks}
+
+	def fetchAllPrices(self):
+		stock_data = {}
+		prices = {}
+		stock_data['timestamp'] = datetime.datetime.now()
+		threads = []
+		for stock in self.stocks:
+			t = Thread(target=partial(self.fetchPrice, stock))
+			threads.append(t)
+			t.start()
+        for t in threads:
+        	t.join()
+			# prices[stock] = self.fetchPrice(stock)
+			# prices[stock] = self.fetchPriceInto(stock, stock_data)
+		stock_data['prices'] = prices
+		return stock_data
+
+	def fetchPriceInto(self, stock, results=None):
+		# helper function to get the price of stock and store in dict
+		results[stock] = self.fetchPrice(stock)
 
 	def fetchPrice(self, stock):
 		# get the price of a single stock
