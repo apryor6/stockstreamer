@@ -39,12 +39,20 @@ line_colors = Dark2[6]
 line_dashes = ['solid']*6
 
 
-image_urls = {'GE'   :  'https://storage.googleapis.com/iex/api/logos/GE.png',
-'AMZN'  :  'https://storage.googleapis.com/iex/api/logos/AMZN.png',
-'GOOG'  :  'https://storage.googleapis.com/iex/api/logos/GOOG.png',
-'TSLA'  :  'https://storage.googleapis.com/iex/api/logos/TSLA.png',
-'AAPL'  :  'https://storage.googleapis.com/iex/api/logos/AAPL.png',
-'NFLX'  :  'https://storage.googleapis.com/iex/api/logos/NFLX.png'}
+
+# get stock image urls and convert to dict
+image_urls = pd.read_sql("""
+	SELECT * FROM stock_image_urls;
+	""", conn)
+image_urls.set_index('stock_name', inplace=True)
+# image_urls = {stock:url for (stock, url) in zip(image_urls['stock_name'], image_urls['image_url'])}
+
+
+stock_highlow = pd.read_sql("""
+	SELECT * FROM stock_highlow;
+	""", conn)
+stock_highlow.set_index('stock_name', inplace=True)
+# stock_highlow = {stock:(high, low) for (stock, (high, low)) in zip(stock_highlow['stock_name'], stock_highlow['image_url'])}
 
 def get_data():
 	df = pd.read_sql("""
@@ -53,11 +61,12 @@ def get_data():
 	AND time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
+	# convert to absolute time in seconds
 	df['time'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
-
 	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
 	max_ys = [np.max(y) for y in ys]
 	return (xs, ys, max_ys, unique_names)
@@ -81,14 +90,21 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    fill_color=line_colors[i],
 	    line_dash=line_dashes[i],
 	    line_width=1))
-	
-	source = ColumnDataSource(dict(y=[max_y],
-								   left=[x.min()],
-			                       right=[x.max()],
-			                       height=[50],
-			                       fill_alpha=[0.2],
-			                       fill_color=[line_colors[i]],
-			                       line_color=[line_colors[i]]))
+
+	source = ColumnDataSource(dict(y=[(stock_highlow.loc[name, 'high_val52wk'] + stock_highlow.loc[name, 'low_val52wk'])/2],
+							   left=[x.min()],
+		                       right=[x.max()],
+		                       height=[[(stock_highlow.loc[name, 'high_val52wk'] - stock_highlow.loc[name, 'low_val52wk'])]],
+		                       fill_alpha=[0.2],
+		                       fill_color=[line_colors[i]],
+		                       line_color=[line_colors[i]]))
+	# source = ColumnDataSource(dict(y=[max_y],
+	# 							   left=[x.min()],
+	# 		                       right=[x.max()],
+	# 		                       height=[50],
+	# 		                       fill_alpha=[0.2],
+	# 		                       fill_color=[line_colors[i]],
+	# 		                       line_color=[line_colors[i]]))
 	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
 		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
@@ -96,7 +112,7 @@ legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], l
 N = len(image_urls)
 latest_timestamp = np.max(xs[0])
 source = ColumnDataSource(dict(
-    url = [image_urls[name] for name in unique_names],
+    url = [image_urls.loc[name, 'image_url'] for name in unique_names],
     x1  = [i.min() for i in xs],
     y1  = max_ys,
     w1  = [64]*N,

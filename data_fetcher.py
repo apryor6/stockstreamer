@@ -180,7 +180,7 @@ class PostgreSQLStockManager():
 		while True:
 			high_low = self.stock_fetcher.fetchAllHighLow()
 			for stock, (high, low) in high_low.items():
-				self.updateStockHighLow("stock_image_highlow", stock, high, low)
+				self.updateStockHighLow("stock_highlow", stock, high, low)
 			time.sleep(sleeptime)
 
 def main():
