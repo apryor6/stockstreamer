@@ -10,49 +10,40 @@ import psycopg2
 import pandas as pd
 import numpy as np
 
+# Interactive tools to use
 tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
 
+# The timestamps are represented graphically as the total seconds since the start of 1970.
+# Choose some values close to the current time to set a reasonable window
 time_today = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
 time_now = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
 p = figure(title="STOCKSTREAMER v0.0", tools=tools, plot_width=1000,
  y_range=Range1d(-50, 1200), x_range=Range1d(time_today-10000, time_now),
  plot_height=680,toolbar_location='below', toolbar_sticky=False)
 
-# set labels
+# set axis labels and other figure properties
 p.yaxis.axis_label = "Price ($US)"
 p.yaxis.axis_label_text_font_size = '12pt'
 p.yaxis[0].formatter = NumeralTickFormatter(format="$0")
 p.xaxis[0].formatter = DatetimeTickFormatter()
-
 p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
 p.title.text_font_size = "16pt"
 
-info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
-	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
-p.add_layout(info_label, 'below')
-
-
 conn = psycopg2.connect("dbname=stocks user=ubuntu")
-line_colors = ['red','green','black','cyan','firebrick','olive']
 line_colors = Dark2[6]
 line_dashes = ['solid']*6
-
-
 
 # get stock image urls and convert to dict
 image_urls = pd.read_sql("""
 	SELECT * FROM stock_image_urls;
 	""", conn)
 image_urls.set_index('stock_name', inplace=True)
-# image_urls = {stock:url for (stock, url) in zip(image_urls['stock_name'], image_urls['image_url'])}
-
 
 stock_highlow = pd.read_sql("""
 	SELECT * FROM stock_highlow;
 	""", conn)
 stock_highlow.set_index('stock_name', inplace=True)
-# stock_highlow = {stock:(high, low) for (stock, (high, low)) in zip(stock_highlow['stock_name'], stock_highlow['image_url'])}
 
 def get_data():
 	df = pd.read_sql("""
@@ -98,13 +89,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 		                       fill_alpha=[0.1],
 		                       fill_color=[line_colors[i]],
 		                       line_color=[line_colors[i]]))
-	# source = ColumnDataSource(dict(y=[max_y],
-	# 							   left=[x.min()],
-	# 		                       right=[x.max()],
-	# 		                       height=[50],
-	# 		                       fill_alpha=[0.2],
-	# 		                       fill_color=[line_colors[i]],
-	# 		                       line_color=[line_colors[i]]))
+
 	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
 		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
@@ -119,11 +104,26 @@ source = ColumnDataSource(dict(
     h1  = [32]*N,
 ))
 
+
+# Adjust the x view based upon the range of the data
+time_range = xs[0].max() - xs[0].min()
+p.x_range.start=np.min(xs[0]) - time_range*0.1
+p.x_range.end=np.max(xs[0])
+
+# Add the stock logos to the plot
 p.x_range=Range1d(-256, xs[0].max())
 image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
  anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
 
+# Add an annotation
+info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
+	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
+p.add_layout(info_label, 'below')
+p.add_layout(legend, 'below')
 
+curdoc().add_root(p)
+
+# create and link the callback function
 def update_figure():
 	xs, ys, max_ys, unique_names = get_data()
 	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
@@ -131,11 +131,5 @@ def update_figure():
 		circles[i].data_source.data.update(x=x, y=y)
 		recs[i].data_source.data.update(left=[0], right=[x.max()])
 
-time_range = xs[0].max() - xs[0].min()
-p.x_range.start=np.min(xs[0]) - time_range*0.1
-p.x_range.end=np.max(xs[0])
-
 update_figure()
-p.add_layout(legend, 'below')
-curdoc().add_root(p)
 curdoc().add_periodic_callback(update_figure, 5000)

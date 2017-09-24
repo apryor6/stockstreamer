@@ -14,16 +14,25 @@ class StockFetcher(metaclass=abc.ABCMeta):
 	def __init__(self, stocks):
 	    self.stocks = stocks
 
-	# @abc.abstractmethod
-	# def fetchAllPrices(self):
-		# return NotImplemented
-
 	@abc.abstractmethod
 	def fetchPrice(self, stock):
+		"""
+		returns current price of stock
+		"""
+		return NotImplemented
+
+	@abc.abstractmethod
+	def fetchStockHighLow(self, stock):
+		"""
+		returns the high/low values of stock
+		"""
 		return NotImplemented
 
 	@abc.abstractmethod
 	def fetchImageURL(self, stock):
+		"""
+		returns a URL pointing to the logo corresponding to stock
+		"""
 		return NotImplemented
 
 class IEXStockFetcher(StockFetcher):
@@ -38,8 +47,6 @@ class IEXStockFetcher(StockFetcher):
 
 	def __init__(self, stocks):
 		super().__init__(stocks)
-		# get the image URLs once
-		# self.stock_image_urls = {stock:self.fetchImage(stock) for stock in self.stocks}
 
 	def fetchAllPrices(self):
 		stock_data = {}
@@ -123,6 +130,9 @@ class PostgreSQLStockManager():
 		self.stock_fetcher = stock_fetcher
 
 	def insertStock(self, table, timestamp, stock, price):
+		"""
+		records a timestamped stock value
+		"""
 		cur = self.conn.cursor()
 		query = """
 		INSERT INTO {} (time, stock_name, price) VALUES(
@@ -134,6 +144,9 @@ class PostgreSQLStockManager():
 		self.conn.commit()
 
 	def updateStockURL(self, table, stock, url):
+		"""
+		updates the table containing stock logo URLs
+		"""
 		cur = self.conn.cursor()
 		delete_query = """
 		DELETE FROM {}
@@ -149,6 +162,9 @@ class PostgreSQLStockManager():
 		self.conn.commit()
 
 	def updateStockHighLow(self, table, stock, high_price, low_price):
+		"""
+		updates the 52-week high/low stock values
+		"""
 		cur = self.conn.cursor()
 		delete_query = """
 		DELETE FROM {}
@@ -163,6 +179,9 @@ class PostgreSQLStockManager():
 		self.conn.commit()
 
 	def fetchInsertStockLoop(self, sleeptime=1):
+		"""
+		main loop for fetching and inserting stocks
+		"""
 		while True:
 			stock_updates = self.stock_fetcher.fetchAllPrices()
 			for stock, price in stock_updates['prices'].items():
@@ -170,6 +189,9 @@ class PostgreSQLStockManager():
 			time.sleep(sleeptime)
 
 	def fetchUpdateImageURLLoop(self, sleeptime=1):
+		"""
+		main loop for fetching and updating logo URLs
+		"""
 		while True:
 			image_updates = self.stock_fetcher.fetchAllImages()
 			for stock, url in image_updates.items():
@@ -177,6 +199,9 @@ class PostgreSQLStockManager():
 			time.sleep(sleeptime)
 
 	def fetchUpdateHighLowLoop(self, sleeptime=1):
+		"""
+		main loop for fetching and updating 52-week high/low values
+		"""
 		while True:
 			high_low = self.stock_fetcher.fetchAllHighLow()
 			for stock, (high, low) in high_low.items():
