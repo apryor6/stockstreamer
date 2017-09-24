@@ -184,16 +184,14 @@ class PostgreSQLStockManager():
 			time.sleep(sleeptime)
 
 def main():
-	stocks_to_fetch = ['GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX']
+	stocks_to_fetch = ['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
 	conn = psycopg2.connect("dbname=stocks user=ajpryor")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
-	for stock in stocks_to_fetch:
-		print("Stock URL : " , stock_fetcher.fetchImageURL(stock))
 
 	stock_price_thread=Thread(target=partial(manager.fetchInsertStockLoop, 5))
-	image_url_thread=Thread(target=partial(manager.fetchUpdateImageURLLoop, 5))
-	high_low_thread=Thread(target=partial(manager.fetchUpdateHighLowLoop, 5))
+	image_url_thread=Thread(target=partial(manager.fetchUpdateImageURLLoop, 5000))
+	high_low_thread=Thread(target=partial(manager.fetchUpdateHighLowLoop, 5000))
 
 	stock_price_thread.start()
 	image_url_thread.start()

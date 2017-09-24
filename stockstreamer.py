@@ -57,7 +57,7 @@ stock_highlow.set_index('stock_name', inplace=True)
 def get_data():
 	df = pd.read_sql("""
 	SELECT * FROM stock_prices
-	WHERE stock_name IN ('GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX')
+	WHERE stock_name IN ('GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX')
 	AND time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
@@ -65,7 +65,8 @@ def get_data():
 	df['time'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
 
 	grouped = df.groupby('stock_name')
-	unique_names = df.stock_name.unique()
+	# unique_names = df.stock_name.unique()
+	unique_names=['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
 	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
 	max_ys = [np.max(y) for y in ys]
@@ -109,7 +110,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
 legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
-N = len(image_urls)
+N = len(unique_names)
 latest_timestamp = np.max(xs[0])
 source = ColumnDataSource(dict(
     url = [image_urls.loc[name, 'image_url'] for name in unique_names],
