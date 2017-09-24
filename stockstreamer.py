@@ -13,12 +13,8 @@ import numpy as np
 # Interactive tools to use
 tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
 
-# The timestamps are represented graphically as the total seconds since the start of 1970.
-# Choose some values close to the current time to set a reasonable window
-time_today = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
-time_now = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
 p = figure(title="STOCKSTREAMER v0.0", tools=tools, plot_width=1000,
- y_range=Range1d(-50, 1200), x_range=Range1d(time_today-10000, time_now),
+ y_range=Range1d(-50, 1200), x_range=Range1d(0, 1),
  plot_height=680,toolbar_location='below', toolbar_sticky=False)
 
 # set axis labels and other figure properties
@@ -122,9 +118,10 @@ image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source
 # Add an annotation
 info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
 	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
+
+
 p.add_layout(info_label, 'below')
 p.add_layout(legend, 'below')
-
 curdoc().add_root(p)
 
 # create and link the callback function

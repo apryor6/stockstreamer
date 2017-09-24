@@ -399,3 +399,183 @@ Now that we have a growing database, we can use that data to produce a visualiza
 
 *As an aside, Bokeh also supports a `stream` method that can be used to update data for a figure. One could alter this code to move the HTTP requests for stock information into a callback function and just have the visualization application fetch its own data, bypassing the database entirely. This could be more performant but at the cost of no longer storing data over time.*
 
+To start with, we import a bunch of packages and create a `figure`
+
+~~~ python
+
+from bokeh.plotting import figure, curdoc, show
+from bokeh.models.sources import ColumnDataSource
+from bokeh.models import Range1d, Legend, NumeralTickFormatter, DatetimeTickFormatter, Title
+from bokeh.models.tools import PanTool, BoxZoomTool, WheelZoomTool, ResetTool
+from bokeh.layouts import row
+from bokeh.palettes import Dark2
+
+import datetime
+import psycopg2
+import pandas as pd
+import numpy as np
+
+# Interactive tools to use
+tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
+
+# The timestamps are represented graphically as the total seconds since the start of 1970.
+# Choose some values close to the current time to set a reasonable window
+p = figure(title="STOCKSTREAMER v0.0", tools=tools, plot_width=1000,
+ y_range=Range1d(-50, 1200), x_range=Range1d(0, 1),
+ plot_height=680,toolbar_location='below', toolbar_sticky=False)
+~~~
+
+The list of tools determines what the user will be able to manipulate the figure with. The x-axis corresponds to a timestamp, but for display purposes times are converted into the absolute number of seconds since Jan. 1, 1970. Setting the display correctly requires a little bit of manipulation that we will get to in a second, but the important part here is that `x_range` must be instantiated with a `Range1d` in order to manipulate it later.
+
+Next we fiddle with some of the basic properties. The `NumeralTickFormatter` and `DatetimeTickFormatter` are particularly nice tools that create nice looking tick labels from numeric data.
+~~~ python
+# set axis labels and other figure properties
+p.yaxis.axis_label = "Price ($US)"
+p.yaxis.axis_label_text_font_size = '12pt'
+p.yaxis[0].formatter = NumeralTickFormatter(format="$0")
+p.xaxis[0].formatter = DatetimeTickFormatter()
+p.background_fill_color = "#F0F0F0"
+p.title.text_font = "times"
+p.title.text_font_size = "16pt"
+line_colors = Dark2[6]
+line_dashes = ['solid']*6
+~~~
+
+Next we create a SQL context and get our metadata about the stock URLs and high/low prices. For visualization purposes we'll draw a line showing the stock price over time with a background rectangle that shows the 52-week high/low range. This is nice because it gives a sense of how the stock is performing on both short and long time scales.
+~~~ python
+# Create the SQL context
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
+
+# get stock image urls
+image_urls = pd.read_sql("""
+	SELECT * FROM stock_image_urls;
+	""", conn)
+image_urls.set_index('stock_name', inplace=True)
+
+# get stock high/low prices
+stock_highlow = pd.read_sql("""
+	SELECT * FROM stock_highlow;
+	""", conn)
+stock_highlow.set_index('stock_name', inplace=True)
+~~~
+
+For conciseness, we'll define a helper function `get_data` that executes a SQL query and creates lists of data to be plotted
+~~~ python
+def get_data():
+	"""
+	helper function to return stock data from last 7 days
+	"""
+	df = pd.read_sql("""
+	SELECT * FROM stock_prices
+	WHERE time >= NOW() - '7 day'::INTERVAL
+	""", conn)
+
+	# convert to absolute time in seconds
+	df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+
+	grouped = df.groupby('stock_name')
+	unique_names = df.stock_name.unique()
+	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
+	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
+	max_ys = [np.max(y) for y in ys]
+	return (xs, ys, max_ys, unique_names)
+~~~
+
+Now we will build the `Bokeh` glyphs, capturing each into a list so that we can reach in later and update their data properties. The one goofy thing about this is that the `hbar` glyphs take scalar values as inputs, which are immutable and thus cannot be updated. My solution was just to create a `ColumnDataSource` with only one row and to pass it in. There is probably a better solution, but this works for now.
+~~~ python
+# Create the various glyph
+xs, ys, max_ys, unique_names = get_data()
+lines = []
+circles = []
+recs = []
+for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
+	lines.append(p.line(x=x,
+	    y=y,
+	    line_alpha=1,
+	    line_color=line_colors[i],
+	    line_dash=line_dashes[i],
+	    line_width=2))
+	circles.append(p.circle(x=x,
+	    y=y,
+	    line_alpha=1,
+	    radius=0.1,
+	    line_color=line_colors[i],
+	    fill_color=line_colors[i],
+	    line_dash=line_dashes[i],
+	    line_width=1))
+
+	# The `hbar` parameters are scalars instead of lists, but we create a ColumnDataSource so they can be easily modified later
+	source = ColumnDataSource(dict(y=[(stock_highlow.loc[name, 'high_val52wk'] + stock_highlow.loc[name, 'low_val52wk'])/2],
+							   left=[0],
+		                       right=[x.max()],
+		                       height=[[(stock_highlow.loc[name, 'high_val52wk'] - stock_highlow.loc[name, 'low_val52wk'])]],
+		                       fill_alpha=[0.1],
+		                       fill_color=[line_colors[i]],
+		                       line_color=[line_colors[i]]))
+
+	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
+		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
+~~~
+
+Lastly we create a legend and display the stock logo at the beginning of each line. An annotation at the bottom of the plot is useful to explain what the background boxes indicate.
+~~~ python
+# Create a legend
+legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
+
+# Adjust the x view based upon the range of the data
+time_range = xs[0].max() - xs[0].min()
+p.x_range.start=np.min(xs[0]) - time_range*0.1
+p.x_range.end=np.max(xs[0])
+
+# Add the stock logos to the plot
+N = len(unique_names)
+source = ColumnDataSource(dict(
+    url = [image_urls.loc[name, 'image_url'] for name in unique_names],
+    x1  = [i.min() for i in xs],
+    y1  = max_ys,
+    w1  = [32]*N,
+    h1  = [32]*N,
+))
+image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
+ anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
+
+# Add an annotation
+info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left',
+	text_font_size='10pt', text_font='times', text_font_style='italic', offset=25)
+~~~
+
+Lastly, we build a layout and create/link our periodic callback. The extension `.data_source.data` accesses the underlying data dictionary used to draw each plot, so by updating it with a new set of data obtained by `get_data` the figure will be rerendered with our new data. This is a short snippet of code, but a *lot* is being done by it.
+~~~ python
+p.add_layout(info_label, 'below')
+p.add_layout(legend, 'below')
+curdoc().add_root(p)
+
+# create and link the callback function
+def update_figure():
+	xs, ys, max_ys, unique_names = get_data()
+	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
+		lines[i].data_source.data.update(x=x, y=y)
+		circles[i].data_source.data.update(x=x, y=y)
+		recs[i].data_source.data.update(left=[0], right=[x.max()])
+
+update_figure()
+curdoc().add_periodic_callback(update_figure, 5000)
+~~~
+
+and that's it! We now have a data fetcher that will perpetually add new entries to a database, and a visualiazation tool that will check every five seconds for new data and update accordingly. A real-time, data-driven web application with relatively few lines of code.
+
+To actually run this application as a `Bokeh` server, you just use the `bokeh serve` command rather than running this as a normal python script. You will also need to add the `--allow-websocket-origin` flag so that the `Bokeh` server lets web traffic through because by default it blocks incoming connections. The actual master script I use to launch this follows
+~~~
+#!/bin/bash
+python data_fetcher.py &
+nohup bokeh serve stockstreamer.py  --allow-websocket-origin=13.59.160.9:5006 </dev/null >/dev/null 2>&1 &
+~~~
+
+The "&" at the end of each line runs the command as a background process, and the business with `nohup` and redirecting input/output with /dev/null is because I found sometimes the background application would die after I had disconnected SSH from the EC2 instance. 
+
+## Summary
+
+We built a pretty cool streaming-data visualization containing a full database to web hosting pipeline using just a little bit of Python/PostgreSQL knowledge. These tools are really powerful, and it goes without saying that the kinds of applications you can create with this kind of setup are essentially unbounded. For example, a big data problem could be visualized in a similar way through use of `PySpark`. You could have a similar style of visualization tool here, and a callback function could be used in conjunction with a `Spark` context to run a big data job on a Spark cluster across many machines, and then display the results. You could train and deploy a machine learning model where coworkers/customers could input raw data values and have the model predictions returned instantly. The list goes on and on.  
+
+This was a fun little weekend project. I hope you found this interesting, and good luck coming up with your own app ideas!
+
