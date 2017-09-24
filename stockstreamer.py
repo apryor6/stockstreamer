@@ -15,7 +15,7 @@ tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool()]
 time_today = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
 time_now = (datetime.datetime.today()-datetime.datetime(1970,1,1)).total_seconds()
 p = figure(title="STOCKSTREAMER v0.0", tools=tools, plot_width=1000,
- y_range=Range1d(-50, 1100), x_range=Range1d(time_today, time_now),
+ y_range=Range1d(-50, 1200), x_range=Range1d(time_today-10000, time_now),
  plot_height=680,toolbar_location='below', toolbar_sticky=False)
 
 # set labels
@@ -61,7 +61,7 @@ def get_data():
 	""", conn)
 
 	# convert to absolute time in seconds
-	df['time'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+	df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
 
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
@@ -95,7 +95,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 							   left=[x.min()],
 		                       right=[x.max()],
 		                       height=[[(stock_highlow.loc[name, 'high_val52wk'] - stock_highlow.loc[name, 'low_val52wk'])]],
-		                       fill_alpha=[0.2],
+		                       fill_alpha=[0.1],
 		                       fill_color=[line_colors[i]],
 		                       line_color=[line_colors[i]]))
 	# source = ColumnDataSource(dict(y=[max_y],
@@ -115,8 +115,8 @@ source = ColumnDataSource(dict(
     url = [image_urls.loc[name, 'image_url'] for name in unique_names],
     x1  = [i.min() for i in xs],
     y1  = max_ys,
-    w1  = [64]*N,
-    h1  = [64]*N,
+    w1  = [32]*N,
+    h1  = [32]*N,
 ))
 
 p.x_range=Range1d(-256, xs[0].max())
@@ -131,8 +131,8 @@ def update_figure():
 		circles[i].data_source.data.update(x=x, y=y)
 		recs[i].data_source.data.update(left=[x.min()], right=[x.max()])
 
-
-p.x_range.start=np.min(xs[0])
+time_range = xs[0].max() - xs[0].min()
+p.x_range.start=np.min(xs[0]) - time_range*0.1
 p.x_range.end=np.max(xs[0])
 
 update_figure()
