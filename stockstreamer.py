@@ -57,7 +57,7 @@ stock_highlow.set_index('stock_name', inplace=True)
 def get_data():
 	df = pd.read_sql("""
 	SELECT * FROM stock_prices
-	WHERE stock_name IN ('GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX')
+	-- WHERE stock_name IN ('GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX')
 	AND time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
@@ -65,8 +65,8 @@ def get_data():
 	df['time'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
 
 	grouped = df.groupby('stock_name')
-	# unique_names = df.stock_name.unique()
-	unique_names=['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
+	unique_names = df.stock_name.unique()
+	# unique_names=['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
 	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
 	max_ys = [np.max(y) for y in ys]
