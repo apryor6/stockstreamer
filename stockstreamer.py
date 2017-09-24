@@ -92,7 +92,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    line_width=1))
 
 	source = ColumnDataSource(dict(y=[(stock_highlow.loc[name, 'high_val52wk'] + stock_highlow.loc[name, 'low_val52wk'])/2],
-							   left=[x.min()],
+							   left=[0],
 		                       right=[x.max()],
 		                       height=[[(stock_highlow.loc[name, 'high_val52wk'] - stock_highlow.loc[name, 'low_val52wk'])]],
 		                       fill_alpha=[0.1],
@@ -129,7 +129,7 @@ def update_figure():
 	for i, (x, y, max_y) in enumerate(zip(xs, ys, max_ys)):
 		lines[i].data_source.data.update(x=x, y=y)
 		circles[i].data_source.data.update(x=x, y=y)
-		recs[i].data_source.data.update(left=[x.min()], right=[x.max()])
+		recs[i].data_source.data.update(left=[0], right=[x.max()])
 
 time_range = xs[0].max() - xs[0].min()
 p.x_range.start=np.min(xs[0]) - time_range*0.1
