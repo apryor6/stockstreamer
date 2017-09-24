@@ -29,23 +29,28 @@ p.xaxis[0].formatter = DatetimeTickFormatter()
 p.background_fill_color = "#F0F0F0"
 p.title.text_font = "times"
 p.title.text_font_size = "16pt"
-
-conn = psycopg2.connect("dbname=stocks user=ubuntu")
 line_colors = Dark2[6]
 line_dashes = ['solid']*6
 
-# get stock image urls and convert to dict
+# Create the SQL context
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
+
+# get stock image urls
 image_urls = pd.read_sql("""
 	SELECT * FROM stock_image_urls;
 	""", conn)
 image_urls.set_index('stock_name', inplace=True)
 
+# get stock high/low prices
 stock_highlow = pd.read_sql("""
 	SELECT * FROM stock_highlow;
 	""", conn)
 stock_highlow.set_index('stock_name', inplace=True)
 
 def get_data():
+	"""
+	helper function to return stock data from last 7 days
+	"""
 	df = pd.read_sql("""
 	SELECT * FROM stock_prices
 	WHERE time >= NOW() - '7 day'::INTERVAL
@@ -56,12 +61,12 @@ def get_data():
 
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
-	# unique_names=['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
 	xs = [grouped.get_group(stock)['time'] for stock in unique_names]
 	max_ys = [np.max(y) for y in ys]
 	return (xs, ys, max_ys, unique_names)
 
+# Create the various glyph
 xs, ys, max_ys, unique_names = get_data()
 lines = []
 circles = []
@@ -82,6 +87,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    line_dash=line_dashes[i],
 	    line_width=1))
 
+	# The `hbar` parameters are scalars instead of lists, but we create a ColumnDataSource so they can be easily modified later
 	source = ColumnDataSource(dict(y=[(stock_highlow.loc[name, 'high_val52wk'] + stock_highlow.loc[name, 'low_val52wk'])/2],
 							   left=[0],
 		                       right=[x.max()],
@@ -93,17 +99,8 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	recs.append(p.hbar(y='y', left='left', right='right', height='height', fill_alpha='fill_alpha',fill_color='fill_color',
 		line_alpha=0.1, line_color='line_color', line_dash='solid', line_width=0.1, source=source))
 
+# Create a legend
 legend = Legend(items=[(stock, [l]) for stock, l in zip(unique_names, lines)], location=(0,0), orientation='horizontal')
-N = len(unique_names)
-latest_timestamp = np.max(xs[0])
-source = ColumnDataSource(dict(
-    url = [image_urls.loc[name, 'image_url'] for name in unique_names],
-    x1  = [i.min() for i in xs],
-    y1  = max_ys,
-    w1  = [32]*N,
-    h1  = [32]*N,
-))
-
 
 # Adjust the x view based upon the range of the data
 time_range = xs[0].max() - xs[0].min()
@@ -111,7 +108,14 @@ p.x_range.start=np.min(xs[0]) - time_range*0.1
 p.x_range.end=np.max(xs[0])
 
 # Add the stock logos to the plot
-# p.x_range=Range1d(-256, xs[0].max())
+N = len(unique_names)
+source = ColumnDataSource(dict(
+    url = [image_urls.loc[name, 'image_url'] for name in unique_names],
+    x1  = [i.min() for i in xs],
+    y1  = max_ys,
+    w1  = [32]*N,
+    h1  = [32]*N,
+))
 image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
  anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
 
