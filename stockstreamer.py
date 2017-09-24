@@ -33,7 +33,7 @@ info_label = Title(text='*Bounding boxes indicate 52-week high/low', align='left
 p.add_layout(info_label, 'below')
 
 
-conn = psycopg2.connect("dbname=stocks user=ajpryor")
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
 line_colors = ['red','green','black','cyan','firebrick','olive']
 line_colors = Dark2[6]
 line_dashes = ['solid']*6
@@ -57,8 +57,7 @@ stock_highlow.set_index('stock_name', inplace=True)
 def get_data():
 	df = pd.read_sql("""
 	SELECT * FROM stock_prices
-	-- WHERE stock_name IN ('GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX')
-	AND time >= NOW() - '7 day'::INTERVAL
+	WHERE time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
 	# convert to absolute time in seconds

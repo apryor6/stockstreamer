@@ -186,7 +186,7 @@ class PostgreSQLStockManager():
 def main():
 	stocks_to_fetch = ['GE', 'AMZN', 'NVDA', 'INTC', 'AAPL', 'NFLX']
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
-	conn = psycopg2.connect("dbname=stocks user=ajpryor")
+	conn = psycopg2.connect("dbname=stocks user=ubuntu")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
 
 	stock_price_thread=Thread(target=partial(manager.fetchInsertStockLoop, 5))
