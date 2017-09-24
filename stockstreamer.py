@@ -111,7 +111,7 @@ p.x_range.start=np.min(xs[0]) - time_range*0.1
 p.x_range.end=np.max(xs[0])
 
 # Add the stock logos to the plot
-p.x_range=Range1d(-256, xs[0].max())
+# p.x_range=Range1d(-256, xs[0].max())
 image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source,
  anchor="center", global_alpha=0.7, w_units='screen', h_units='screen')
 
