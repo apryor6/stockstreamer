@@ -53,7 +53,7 @@ def get_data():
 	""", conn)
 
 	# convert to absolute time in seconds
-	df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
+	#df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
 
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
