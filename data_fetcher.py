@@ -46,7 +46,7 @@ class IEXStockFetcher(StockFetcher):
 		stock_data['timestamp'] = datetime.datetime.now()
 		threads = []
 		for stock in self.stocks:
-			t = Thread(target=partial(self.fetchPrice, stock))
+			t = Thread(target=partial(self.fetchPriceInto, stock, stock_data))
 			threads.append(t)
 			t.start()
 		for t in threads:
@@ -120,8 +120,11 @@ class PostgreSQLStockManager():
 
 	def fetchInsertStockLoop(self, sleeptime=1):
 		while True:
+			print("fetching stocks")
 			stock_updates = self.stock_fetcher.fetchAllPrices()
+			print ("stock_updates = " , stock_updates)
 			for stock, price in stock_updates['prices'].items():
+				print("inserting stocks")
 				self.insertStock("stock_prices", stock_updates['timestamp'], stock, price)
 			time.sleep(sleeptime)
 
@@ -133,7 +136,7 @@ class PostgreSQLStockManager():
 def main():
 	stocks_to_fetch = ['GE', 'AMZN', 'GOOG', 'TSLA', 'AAPL', 'NFLX']
 	stock_fetcher = IEXStockFetcher(stocks_to_fetch)
-	conn = psycopg2.connect("dbname=stocks user=ubuntu")
+	conn = psycopg2.connect("dbname=stocks user=ajpryor")
 	manager = PostgreSQLStockManager(conn, stock_fetcher)
 	metadata_manager = PostgreSQLStockManager(conn, stock_fetcher)
 	for stock in stocks_to_fetch:

@@ -120,6 +120,7 @@ image_plot = p.image_url(url='url' ,x='x1', y='y1', w='w1', h='h1',source=source
 
 def update_figure():
 	xs, ys, max_ys, unique_names = get_data()
+	print ("hello")
 	# p.x_range.update(start=0, stop=100)
 #	p.x_range.start=np.min(xs[0])
 #	p.x_range.end=np.max(xs[0])
