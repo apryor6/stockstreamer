@@ -49,8 +49,8 @@ class IEXStockFetcher(StockFetcher):
 			t = Thread(target=partial(self.fetchPrice, stock))
 			threads.append(t)
 			t.start()
-        for t in threads:
-        	t.join()
+		for t in threads:
+			t.join()
 			# prices[stock] = self.fetchPrice(stock)
 			# prices[stock] = self.fetchPriceInto(stock, stock_data)
 		stock_data['prices'] = prices
