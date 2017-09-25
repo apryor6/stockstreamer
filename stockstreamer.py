@@ -12,7 +12,7 @@ import numpy as np
 
 # Interactive tools to use
 hover =  HoverTool(tooltips=[('Stock Name', '@stock_name'),
-							('Time','$x'),
+							('Time','@timestamp'),
 				            ('Price', '@y')])
 tools = [PanTool(), BoxZoomTool(), ResetTool(), WheelZoomTool(), hover]
 									
@@ -33,7 +33,7 @@ line_colors = Dark2[6]
 line_dashes = ['solid']*6
 
 # Create the SQL context
-conn = psycopg2.connect("dbname=stocks user=ajpryor")
+conn = psycopg2.connect("dbname=stocks user=ubuntu")
 
 # get stock image urls
 image_urls = pd.read_sql("""
@@ -56,9 +56,6 @@ def get_data():
 	WHERE time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
-	# convert to absolute time in seconds
-	#df['time_s'] = df['time'].apply(lambda x: (x-datetime.datetime(1970,1,1)).total_seconds())
-
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
@@ -75,13 +72,9 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	# print(name, [[name_mapper[name]]*len(x)])
 	source = ColumnDataSource(dict(x=x,
 								   y=y,
-   								   # stock_name=['hey']*len(x)))
-
+   								   timestamp = ['{}/{}/{} {:02d}:{:02d}:{:02d}'.format(a.month, a.day, a.year, a.hour, a.minute, a.second) for a in x],
 								   stock_name=[name_mapper[name]]*len(x)))
-									    # line_alpha=1,
-									    # line_colors=[line_colors[i]],
-									    # line_dashes=[line_dashes[i]]))
-									    # line_width=2))
+
 	lines.append(p.line(x='x',
 	    y='y',
 	    line_alpha=1,
@@ -99,23 +92,6 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	    line_dash=line_dashes[i],
 	    line_width=1,
 	    source=source))
-
-	# lines.append(p.line(x=x,
-	#     y=y,
-	#     line_alpha=1,
-	#     line_color=line_colors[i],
-	#     line_dash=line_dashes[i],
-	#     line_width=2))
-
-
-	# circles.append(p.circle(x=x,
-	#     y=y,
-	#     line_alpha=1,
-	#     radius=0.1,
-	#     line_color=line_colors[i],
-	#     fill_color=line_colors[i],
-	#     line_dash=line_dashes[i],
-	#     line_width=1))
 
 	# The `hbar` parameters are scalars instead of lists, but we create a ColumnDataSource so they can be easily modified later
 	hbar_source = ColumnDataSource(dict(y=[(stock_highlow.loc[name, 'high_val52wk'] + stock_highlow.loc[name, 'low_val52wk'])/2],
@@ -164,10 +140,10 @@ def update_figure():
 	xs, ys, max_ys, unique_names = get_data()
 	for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 		# lines[i].data_source.data.update(x=[x], y=[y], stock_name=[[name_mapper[name]]*len(x)])
-		lines[i].data_source.data.update(x=x, y=y, stock_name=[name_mapper[name]]*len(x))
-		# lines[i].data_source.data.update(x=x, y=y, stock_name=['hey']*len(x))
-
-		# circles[i].data_source.data.update(x=x, y=y)
+		lines[i].data_source.data.update(x=x,
+		 y=y,
+		 stock_name=[name_mapper[name]]*len(x),
+		 timestamp=['{}/{}/{} {:02d}:{:02d}:{:02d}'.format(a.month, a.day, a.year, a.hour, a.minute, a.second) for a in x],
 		recs[i].data_source.data.update(left=[0], right=[x.max()])
 
 update_figure()
