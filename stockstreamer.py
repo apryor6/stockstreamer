@@ -56,6 +56,8 @@ def get_data():
 	WHERE time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
+	important_indices = (df.groupby('stock_name')['price'].diff() != 0) | (df.groupby('stock_name')['price'].shift(-1).diff() != 0)
+	df = df.loc[important_indices, ]
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
@@ -86,7 +88,7 @@ for i, (x, y, max_y, name) in enumerate(zip(xs, ys, max_ys, unique_names)):
 	circles.append(p.circle(x='x',
 	    y='y',
 	    line_alpha=1,
-	    radius=1000,
+	    radius=250,
 	    line_color=line_colors[i],
 	    fill_color=line_colors[i],
 	    line_dash=line_dashes[i],
@@ -143,7 +145,7 @@ def update_figure():
 		lines[i].data_source.data.update(x=x,
 		 y=y,
 		 stock_name=[name_mapper[name]]*len(x),
-		 timestamp=['{}/{}/{} {:02d}:{:02d}:{:02d}'.format(a.month, a.day, a.year, a.hour, a.minute, a.second) for a in x],
+		 timestamp=['{}/{}/{} {:02d}:{:02d}:{:02d}'.format(a.month, a.day, a.year, a.hour, a.minute, a.second) for a in x])
 		recs[i].data_source.data.update(left=[0], right=[x.max()])
 
 update_figure()
