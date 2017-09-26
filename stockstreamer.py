@@ -56,8 +56,10 @@ def get_data():
 	WHERE time >= NOW() - '7 day'::INTERVAL
 	""", conn)
 
-	important_indices = (df.groupby('stock_name')['price'].diff() != 0) | (df.groupby('stock_name')['price'].diff().shift(-1) != 0)
-	df = df.loc[important_indices, ]
+	# df['important_indices'] = (df.groupby('stock_name')['price'].diff() != 0) | (df.groupby('stock_name')['price'].diff().groupby('stock_name').shift(-1) != 0)
+	df['important_indices'] = df.groupby('stock_name')['price'].diff() != 0 
+	df['important_indices'] = (df['important_indices'] != 0) | (df.groupby('stock_name')['important_indices'].shift(-1))
+	df = df.loc[df.important_indices, ]
 	grouped = df.groupby('stock_name')
 	unique_names = df.stock_name.unique()
 	ys = [grouped.get_group(stock)['price'] for stock in unique_names]
