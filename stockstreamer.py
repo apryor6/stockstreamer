@@ -55,8 +55,7 @@ def get_data():
 	SELECT * FROM stock_prices
 	WHERE time >= NOW() - '7 day'::INTERVAL
 	""", conn)
-
-	# df['important_indices'] = (df.groupby('stock_name')['price'].diff() != 0) | (df.groupby('stock_name')['price'].diff().groupby('stock_name').shift(-1) != 0)
+	
 	df['important_indices'] = df.groupby('stock_name')['price'].diff() != 0 
 	df['important_indices'] = (df['important_indices'] != 0) | (df.groupby('stock_name')['important_indices'].shift(-1))
 	df = df.loc[df.important_indices, ]

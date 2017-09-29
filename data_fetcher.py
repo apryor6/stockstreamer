@@ -170,12 +170,21 @@ class PostgreSQLStockManager():
 		DELETE FROM {}
 		WHERE stock_name=\'{}\';
 		""".format(table, stock)
-		query = """
-		INSERT INTO {} (stock_name, high_val52wk, low_val52wk) VALUES(
-		\'{}\', {}, {});
-		""".format(table, stock, high_price, low_price)
+
+		query = """INSERT INTO {} (stock_name, high_val52wk, low_val52wk) VALUES(%s, %s, %s);""".format(table)
+
 		cur.execute(delete_query)
-		cur.execute(query)
+
+		cur.execute(query, (stock, high_price, low_price))
+
+		self.conn.commit()
+		
+		# query = """
+		# INSERT INTO {} (stock_name, high_val52wk, low_val52wk) VALUES(
+		# \'{}\', {}, {});
+		# """.format(table, stock, high_price, low_price)
+		# cur.execute(delete_query)
+		# cur.execute(query)
 		self.conn.commit()
 
 	def fetchInsertStockLoop(self, sleeptime=1):
